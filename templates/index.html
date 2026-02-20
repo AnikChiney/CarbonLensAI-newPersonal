@@ -46,7 +46,6 @@
             margin: 0 auto;
         }
 
-        /* Header */
         .header {
             text-align: center;
             margin-bottom: 40px;
@@ -73,7 +72,6 @@
             margin: 0 auto;
         }
 
-        /* Cards */
         .card {
             background: var(--card-bg);
             border-radius: 16px;
@@ -98,7 +96,6 @@
             color: var(--text);
         }
 
-        /* Form Grid */
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -131,7 +128,8 @@
         }
 
         input[type="text"],
-        input[type="number"] {
+        input[type="number"],
+        select {
             width: 100%;
             padding: 12px 12px 12px 40px;
             border: 2px solid var(--border);
@@ -140,10 +138,12 @@
             transition: all 0.3s ease;
             background: var(--card-bg);
             color: var(--text);
+            font-family: 'Inter', sans-serif;
         }
 
         input[type="text"]:focus,
-        input[type="number"]:focus {
+        input[type="number"]:focus,
+        select:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
@@ -153,7 +153,6 @@
             color: #94a3b8;
         }
 
-        /* Range Slider Styling */
         .range-container {
             margin-top: 8px;
         }
@@ -191,7 +190,6 @@
             margin-top: 4px;
         }
 
-        /* Button */
         .btn-primary {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
@@ -220,7 +218,6 @@
             transform: translateY(0);
         }
 
-        /* Results Section */
         .results-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -282,7 +279,6 @@
             color: var(--success);
         }
 
-        /* Risk Badge */
         .risk-badge {
             display: inline-flex;
             align-items: center;
@@ -312,7 +308,6 @@
             border: 2px solid #86efac;
         }
 
-        /* Cost Section Styles */
         .cost-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -459,7 +454,6 @@
             margin: 0;
         }
 
-        /* Recommendations List */
         .recommendations-list {
             display: flex;
             flex-direction: column;
@@ -558,7 +552,6 @@
             margin-left: auto;
         }
 
-        /* Charts Carousel */
         .carousel-container {
             position: relative;
             overflow: hidden;
@@ -651,7 +644,6 @@
             transform: scale(1.1);
         }
 
-        /* Insights Panel */
         .insights-panel {
             background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
             border-left: 4px solid var(--secondary);
@@ -683,7 +675,6 @@
             margin-top: 2px;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 1.75rem;
@@ -723,7 +714,6 @@
             }
         }
 
-        /* Loading Animation */
         .loading {
             display: inline-block;
             width: 20px;
@@ -738,7 +728,6 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Fade In Animation */
         .fade-in {
             animation: fadeIn 0.6s ease-out;
         }
@@ -748,7 +737,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Rupee Symbol Styling */
         .rupee-symbol {
             font-family: 'Inter', sans-serif;
             font-weight: 600;
@@ -810,6 +798,26 @@
                     <div class="input-wrapper">
                         <i class="fas fa-trash-alt"></i>
                         <input type="number" step="0.1" name="waste" placeholder="0.0" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Annual Flight Distance (km)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-plane"></i>
+                        <input type="number" step="1" name="flight_distance" placeholder="e.g., 5000" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Flight Class</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-chair"></i>
+                        <select name="flight_class" required>
+                            <option value="economy">Economy</option>
+                            <option value="business">Business (2x emissions)</option>
+                            <option value="first">First Class (3x emissions)</option>
+                        </select>
                     </div>
                 </div>
 
@@ -910,7 +918,6 @@
             </div>
             
             <div class="cost-grid">
-                <!-- Current Cost Card -->
                 <div class="cost-card">
                     <div class="cost-header">
                         <div class="cost-icon">
@@ -953,10 +960,16 @@
                             </div>
                             <div class="cost-item-value"><span class="rupee-symbol">₹</span>{{ "%.0f"|format(result.cost_analysis.waste_cost) }}</div>
                         </div>
+                        <div class="cost-item" style="border-color: #fecaca; background: #fef2f2;">
+                            <div class="cost-item-label">
+                                <i class="fas fa-plane" style="color: var(--danger);"></i>
+                                <strong>Flight Carbon Cost</strong>
+                            </div>
+                            <div class="cost-item-value" style="color: var(--danger);"><span class="rupee-symbol">₹</span>{{ "%.0f"|format(result.cost_analysis.flight_cost) }}</div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Potential Savings Card -->
                 <div class="cost-card premium">
                     <div class="cost-header">
                         <div class="cost-icon">
@@ -1001,6 +1014,15 @@
                                 -<span class="rupee-symbol">₹</span>{{ "%.0f"|format(result.cost_analysis.efficiency_savings) }}
                             </div>
                         </div>
+                        <div class="cost-item" style="border-color: #fecaca;">
+                            <div class="cost-item-label">
+                                <i class="fas fa-plane-slash" style="color: var(--danger);"></i>
+                                Reduce flights 50%
+                            </div>
+                            <div class="cost-item-value" style="color: var(--success);">
+                                -<span class="rupee-symbol">₹</span>{{ "%.0f"|format(result.cost_analysis.flight_reduction_savings) }}
+                            </div>
+                        </div>
                     </div>
 
                     <div class="savings-highlight">
@@ -1015,7 +1037,6 @@
                 </div>
             </div>
 
-            <!-- ROI Visualization Chart -->
             <div style="margin-top: 32px;">
                 <div class="chart-title" style="margin-bottom: 16px;">
                     <i class="fas fa-chart-bar" style="color: var(--accent);"></i>
@@ -1027,7 +1048,195 @@
             </div>
         </div>
 
-        <!-- Texted Recommendations -->
+        <!-- Carbon Credits & Flight Analysis Section -->
+        <div class="card">
+            <div class="card-title">
+                <i class="fas fa-plane-departure" style="color: var(--danger);"></i>
+                Flight Carbon Analysis & Offset Options
+            </div>
+            
+            <div class="results-grid" style="margin-bottom: 24px;">
+                <div class="metric-card" style="border-color: #fecaca; background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);">
+                    <div class="metric-icon" style="background: var(--danger);">
+                        <i class="fas fa-plane"></i>
+                    </div>
+                    <div class="metric-value">{{ result.flight_data.emissions }}</div>
+                    <div class="metric-label">Flight Emissions (tonnes CO₂)</div>
+                    <div class="metric-comparison above">
+                        <i class="fas fa-percentage"></i> {{ result.flight_data.percentage }}% of your total footprint
+                    </div>
+                </div>
+
+                <div class="metric-card" style="border-color: #bfdbfe; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);">
+                    <div class="metric-icon" style="background: var(--secondary);">
+                        <i class="fas fa-tree"></i>
+                    </div>
+                    <div class="metric-value">{{ result.carbon_credit_analysis.flight_equivalents.trees_to_offset }}</div>
+                    <div class="metric-label">Trees Needed to Offset</div>
+                    <div class="metric-comparison" style="color: var(--text-muted);">
+                        Over 20-year growth period
+                    </div>
+                </div>
+
+                <div class="metric-card" style="border-color: #ddd6fe; background: linear-gradient(135deg, #faf5ff 0%, #ffffff 100%);">
+                    <div class="metric-icon" style="background: var(--accent);">
+                        <i class="fas fa-certificate"></i>
+                    </div>
+                    <div class="metric-value">{{ result.carbon_credit_analysis.flight_credits_needed }}</div>
+                    <div class="metric-label">Carbon Credits Required</div>
+                    <div class="metric-comparison" style="color: var(--accent);">
+                        1 credit = 1 tonne CO₂
+                    </div>
+                </div>
+
+                <div class="metric-card" style="border-color: #fde68a; background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);">
+                    <div class="metric-icon" style="background: var(--warning);">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="metric-value"><span class="rupee-symbol">₹</span>{{ result.carbon_credit_analysis.credit_costs.premium.flight_only }}</div>
+                    <div class="metric-label">Annual Offset Cost (Premium)</div>
+                    <div class="metric-comparison" style="color: var(--text-muted);">
+                        <span class="rupee-symbol">₹</span>{{ result.carbon_credit_analysis.monthly_flight_cost }}/month
+                    </div>
+                </div>
+            </div>
+
+            <div class="cost-grid">
+                <div class="cost-card">
+                    <div class="cost-header">
+                        <div class="cost-icon" style="background: linear-gradient(135deg, var(--success) 0%, #059669 100%);">
+                            <i class="fas fa-leaf"></i>
+                        </div>
+                        <div>
+                            <div class="cost-title">Carbon Offset Options</div>
+                            <div class="cost-subtitle">Verified projects to neutralize flights</div>
+                        </div>
+                    </div>
+                    
+                    <div class="cost-breakdown">
+                        <div class="cost-item" style="border-color: #86efac; background: #f0fdf4;">
+                            <div class="cost-item-label">
+                                <i class="fas fa-tree" style="color: var(--success);"></i>
+                                <strong>Forestry/Reforestation</strong>
+                            </div>
+                            <div class="cost-item-value" style="color: var(--success);">
+                                <span class="rupee-symbol">₹</span>{{ result.carbon_credit_analysis.credit_costs.forestry.flight_only }}
+                            </div>
+                        </div>
+                        <div class="cost-item">
+                            <div class="cost-item-label">
+                                <i class="fas fa-wind" style="color: var(--secondary);"></i>
+                                Wind/Solar Projects
+                            </div>
+                            <div class="cost-item-value">
+                                <span class="rupee-symbol">₹</span>{{ result.carbon_credit_analysis.credit_costs.renewable.flight_only }}
+                            </div>
+                        </div>
+                        <div class="cost-item">
+                            <div class="cost-item-label">
+                                <i class="fas fa-fire" style="color: var(--warning);"></i>
+                                Clean Cookstoves
+                            </div>
+                            <div class="cost-item-value">
+                                <span class="rupee-symbol">₹</span>{{ result.carbon_credit_analysis.credit_costs.cookstove.flight_only }}
+                            </div>
+                        </div>
+                        <div class="cost-item">
+                            <div class="cost-item-label">
+                                <i class="fas fa-atom" style="color: var(--accent);"></i>
+                                Direct Air Capture
+                            </div>
+                            <div class="cost-item-value">
+                                <span class="rupee-symbol">₹</span>{{ result.carbon_credit_analysis.credit_costs.direct_air.flight_only }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="savings-highlight" style="background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border-color: #93c5fd;">
+                        <div class="savings-icon" style="background: var(--secondary);">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <div class="savings-content">
+                            <h4 style="color: var(--secondary);">Recommended: {{ result.carbon_credit_analysis.recommended_project.title() }} Projects</h4>
+                            <p>Best balance of cost, verification, and co-benefits for your emission level.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cost-card premium">
+                    <div class="cost-header">
+                        <div class="cost-icon" style="background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);">
+                            <i class="fas fa-balance-scale"></i>
+                        </div>
+                        <div>
+                            <div class="cost-title">Flight Impact Equivalents</div>
+                            <div class="cost-subtitle">Your annual flights equal to:</div>
+                        </div>
+                    </div>
+                    
+                    <div class="cost-breakdown">
+                        <div class="cost-item">
+                            <div class="cost-item-label">
+                                <i class="fas fa-car" style="color: var(--danger);"></i>
+                                Driving Distance
+                            </div>
+                            <div class="cost-item-value">
+                                {{ "{:,}".format(result.carbon_credit_analysis.flight_equivalents.driving_km_equivalent) }} km
+                            </div>
+                        </div>
+                        <div class="cost-item">
+                            <div class="cost-item-label">
+                                <i class="fas fa-utensils" style="color: var(--warning);"></i>
+                                Meals Emissions
+                            </div>
+                            <div class="cost-item-value">
+                                {{ "{:,}".format(result.carbon_credit_analysis.flight_equivalents.meals_equivalent) }} meals
+                            </div>
+                        </div>
+                        <div class="cost-item">
+                            <div class="cost-item-label">
+                                <i class="fas fa-bolt" style="color: var(--secondary);"></i>
+                                Home Electricity (1 year)
+                            </div>
+                            <div class="cost-item-value">
+                                {{ "{:,}".format(result.carbon_credit_analysis.flight_equivalents.solar_kwh_equivalent) }} kWh
+                            </div>
+                        </div>
+                        <div class="cost-item" style="border-color: #86efac; background: #f0fdf4;">
+                            <div class="cost-item-label">
+                                <i class="fas fa-tree" style="color: var(--success);"></i>
+                                <strong>Tree Seedlings (20-year growth)</strong>
+                            </div>
+                            <div class="cost-item-value" style="color: var(--success); font-weight: 700;">
+                                {{ result.carbon_credit_analysis.flight_equivalents.trees_to_offset }} trees
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="savings-highlight">
+                        <div class="savings-icon" style="background: var(--danger);">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <div class="savings-content">
+                            <h4 style="color: var(--danger);">Did You Know?</h4>
+                            <p>A single round-trip flight from Delhi to London (approx. 13,500 km) emits more CO₂ than the average person in India produces in an entire year.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 32px;">
+                <div class="chart-title" style="margin-bottom: 16px;">
+                    <i class="fas fa-chart-pie" style="color: var(--danger);"></i>
+                    Emissions by Source 
+                </div>
+                <div style="height: 300px; position: relative;">
+                    <canvas id="flightBreakdownChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendations -->
         <div class="card">
             <div class="card-title">
                 <i class="fas fa-clipboard-list" style="color: var(--primary);"></i>
@@ -1147,22 +1356,27 @@
                 <i class="fas fa-check-circle insight-icon"></i>
                 <span>Your reduction target of <strong>{{ result.reduction_scenario }}%</strong> is achievable by 2030 with moderate lifestyle adjustments</span>
             </div>
+            {% if result.flight_data.emissions > 1 %}
+            <div class="insight-item">
+                <i class="fas fa-plane insight-icon" style="color: var(--danger);"></i>
+                <span>Your flights contribute <strong>{{ result.flight_data.percentage }}%</strong> of emissions. Consider carbon offsets or reducing air travel for immediate impact.</span>
+            </div>
+            {% endif %}
         </div>
     </div>
 
     <script>
     const chartData = {{ result | tojson | safe }};
 
-    // Chart Configuration
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.color = '#64748b';
 
-    // ROI Chart (New)
+    // ROI Chart
     const roiCtx = document.getElementById('roiChart').getContext('2d');
     new Chart(roiCtx, {
         type: 'bar',
         data: {
-            labels: ['Current Cost', 'With Solar', 'With EV', 'With Home Efficiency', 'Full Optimization'],
+            labels: chartData.cost_analysis.roi_scenarios.labels,
             datasets: [
                 {
                     label: 'Annual Cost (₹)',
@@ -1172,6 +1386,7 @@
                         '#f59e0b',
                         '#f59e0b',
                         '#f59e0b',
+                        '#dc2626',
                         '#059669'
                     ],
                     borderRadius: 8,
@@ -1326,10 +1541,11 @@
             datasets: [{
                 data: Object.values(chartData.breakdown),
                 backgroundColor: [
-                    '#059669',  // Transport
-                    '#0ea5e9',  // Electricity
-                    '#f59e0b',  // Food
-                    '#ef4444'   // Waste
+                    '#059669',
+                    '#0ea5e9',
+                    '#f59e0b',
+                    '#ef4444',
+                    '#dc2626'
                 ],
                 borderWidth: 0,
                 hoverOffset: 10
@@ -1339,6 +1555,53 @@
             responsive: true,
             maintainAspectRatio: false,
             cutout: '65%',
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        font: { size: 12, weight: 500 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.raw / total) * 100).toFixed(1);
+                            return context.label + ': ' + context.raw + ' t (' + percentage + '%)';
+                        }
+                    },
+                    backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                    padding: 12,
+                    cornerRadius: 8
+                }
+            }
+        }
+    });
+
+    // Flight Breakdown Chart
+    new Chart(document.getElementById('flightBreakdownChart'), {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(chartData.breakdown),
+            datasets: [{
+                data: Object.values(chartData.breakdown),
+                backgroundColor: [
+                    '#059669',
+                    '#0ea5e9',
+                    '#f59e0b',
+                    '#ef4444',
+                    '#dc2626'
+                ],
+                borderWidth: 0,
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
             plugins: {
                 legend: {
                     position: 'right',
@@ -1446,7 +1709,6 @@
         }, 5000);
     }
 
-    // Touch support for mobile
     let touchStartX = 0;
     let touchEndX = 0;
 
@@ -1463,12 +1725,10 @@
         }
     });
 
-    // Pause on hover
     const container = document.querySelector('.carousel-container');
     container.addEventListener('mouseenter', () => clearInterval(autoRotateInterval));
     container.addEventListener('mouseleave', resetAutoRotate);
 
-    // Start auto-rotation
     resetAutoRotate();
 
     </script>

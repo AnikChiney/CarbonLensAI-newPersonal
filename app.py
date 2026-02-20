@@ -5,7 +5,7 @@ app = Flask(__name__)
 
 # Carbon pricing by country (USD per tonne CO2)
 CARBON_PRICING = {
-    'default': 50,  # Global average carbon price
+    'default': 50,
     'canada': 65,
     'united kingdom': 85,
     'germany': 90,
@@ -114,9 +114,25 @@ COUNTRY_AVERAGES = {
     'vatican city': 0.5
 }
 
+# Flight emission factors (kg CO2 per passenger km)
+FLIGHT_EMISSION_FACTORS = {
+    'economy': 0.255,
+    'business': 0.510,
+    'first': 0.765
+}
+
+# Carbon credit pricing (USD per tonne)
+CARBON_CREDIT_PRICING = {
+    'forestry': 15,
+    'renewable': 20,
+    'cookstove': 12,
+    'methane': 18,
+    'direct_air': 120,
+    'premium': 50
+}
+
 def calculate_emissions(data):
     """Calculate carbon emissions based on user inputs"""
-    # Extract inputs
     country = data.get('country', '').lower().strip()
     distance = float(data.get('distance', 0))
     electricity = float(data.get('electricity', 0))
@@ -125,28 +141,23 @@ def calculate_emissions(data):
     renewable = float(data.get('renewable', 0))
     reduction = float(data.get('reduction', 10))
     
-    # Get country average
+    flight_distance = float(data.get('flight_distance', 0))
+    flight_class = data.get('flight_class', 'economy')
+    
     country_avg = COUNTRY_AVERAGES.get(country, COUNTRY_AVERAGES['default'])
     
-    # Calculate individual components (tonnes CO2 per year)
-    # Transport: 0.12 kg CO2 per km (car average) * 365 days
     transport_emissions = (distance * 0.12 * 365) / 1000
-    
-    # Electricity: 0.4 kg CO2 per kWh (global average) * 12 months
-    # Adjust for renewable energy usage
     electricity_factor = 0.4 * (1 - renewable / 100)
     electricity_emissions = (electricity * electricity_factor * 12) / 1000
-    
-    # Food: 2.5 kg CO2 per meal (average diet) * 365 days
     food_emissions = (meals * 2.5 * 365) / 1000
-    
-    # Waste: 0.5 kg CO2 per kg waste * 52 weeks
     waste_emissions = (waste * 0.5 * 52) / 1000
     
-    # Total personal emissions
-    personal_current = transport_emissions + electricity_emissions + food_emissions + waste_emissions
+    flight_factor = FLIGHT_EMISSION_FACTORS.get(flight_class, 0.255)
+    flight_emissions = (flight_distance * flight_factor * 2) / 1000
     
-    # Determine risk level
+    personal_current = transport_emissions + electricity_emissions + food_emissions + waste_emissions + flight_emissions
+    flight_percentage = (flight_emissions / personal_current * 100) if personal_current > 0 else 0
+    
     if personal_current > country_avg * 1.3:
         risk = "High"
     elif personal_current > country_avg * 0.9:
@@ -154,30 +165,32 @@ def calculate_emissions(data):
     else:
         risk = "Low"
     
-    # Generate 10-year forecast
     years = list(range(2025, 2035))
-    original = [personal_current * (1.02 ** i) for i in range(10)]  # 2% annual growth
-    adjusted = [personal_current * (1 - reduction/100) * (0.98 ** i) for i in range(10)]  # With reduction
+    original = [personal_current * (1.02 ** i) for i in range(10)]
+    adjusted = [personal_current * (1 - reduction/100) * (0.98 ** i) for i in range(10)]
     
-    # Emission breakdown
     breakdown = {
         'Transport': round(transport_emissions, 2),
         'Electricity': round(electricity_emissions, 2),
         'Food': round(food_emissions, 2),
-        'Waste': round(waste_emissions, 2)
+        'Waste': round(waste_emissions, 2),
+        'Flights': round(flight_emissions, 2)
     }
     
-    # Calculate cost analysis
     cost_analysis = calculate_cost_analysis(
         country, personal_current, transport_emissions, 
         electricity_emissions, food_emissions, waste_emissions,
-        reduction, renewable
+        flight_emissions, reduction, renewable
     )
     
-    # Generate recommendations
+    carbon_credit_analysis = calculate_carbon_credits(
+        flight_emissions, personal_current, country
+    )
+    
     recommendations = generate_recommendations(
         transport_emissions, electricity_emissions, food_emissions, 
-        waste_emissions, renewable, reduction
+        waste_emissions, flight_emissions, renewable, reduction,
+        flight_distance, flight_class
     )
     
     return {
@@ -190,40 +203,46 @@ def calculate_emissions(data):
         'breakdown': breakdown,
         'reduction_scenario': reduction,
         'cost_analysis': cost_analysis,
-        'recommendations': recommendations
+        'carbon_credit_analysis': carbon_credit_analysis,
+        'recommendations': recommendations,
+        'flight_data': {
+            'distance': flight_distance,
+            'class': flight_class,
+            'emissions': round(flight_emissions, 2),
+            'percentage': round(flight_percentage, 1),
+            'per_km': flight_factor
+        }
     }
 
-def calculate_cost_analysis(country, total_emissions, transport, electricity, food, waste, reduction_target, renewable_pct):
-    """Calculate cost implications of carbon emissions and potential savings"""
-    # Get carbon price for country
+def calculate_cost_analysis(country, total_emissions, transport, electricity, food, waste, flights, reduction_target, renewable_pct):
+    """Calculate cost implications including flight carbon costs"""
     carbon_price = CARBON_PRICING.get(country, CARBON_PRICING['default'])
     
-    # Calculate current annual carbon costs
     transport_cost = round(transport * carbon_price)
     electricity_cost = round(electricity * carbon_price)
-    food_cost = round(food * carbon_price * 0.3)  # Food has lower carbon pricing
-    waste_cost = round(waste * carbon_price * 0.5)  # Waste has medium carbon pricing
+    food_cost = round(food * carbon_price * 0.3)
+    waste_cost = round(waste * carbon_price * 0.5)
+    flight_cost = round(flights * carbon_price * 1.5)
     
-    current_annual_cost = transport_cost + electricity_cost + food_cost + waste_cost
+    current_annual_cost = transport_cost + electricity_cost + food_cost + waste_cost + flight_cost
     
-    # Calculate potential savings from various interventions
-    solar_savings = round(electricity_cost * 0.6)  # Solar reduces electricity cost by 60%
-    transport_savings = round(transport_cost * 0.35)  # EV/public transit saves 35%
-    efficiency_savings = round(electricity_cost * 0.25)  # Home efficiency saves 25%
+    flight_reduction_savings = round(flight_cost * 0.5)
+    solar_savings = round(electricity_cost * 0.6)
+    transport_savings = round(transport_cost * 0.35)
+    efficiency_savings = round(electricity_cost * 0.25)
     
-    potential_savings = solar_savings + transport_savings + efficiency_savings
+    potential_savings = solar_savings + transport_savings + efficiency_savings + flight_reduction_savings
     
-    # 10-year projection
     ten_year_savings = potential_savings * 10
-    ten_year_reduction = (potential_savings / carbon_price) * 10  # Convert cost back to tonnes
+    ten_year_reduction = (potential_savings / carbon_price) * 10
     
-    # ROI scenarios for chart
     scenarios = {
         'costs': [
             current_annual_cost,
             current_annual_cost - solar_savings,
             current_annual_cost - transport_savings,
             current_annual_cost - efficiency_savings,
+            current_annual_cost - flight_reduction_savings,
             current_annual_cost - potential_savings
         ],
         'carbon_costs': [
@@ -231,9 +250,11 @@ def calculate_cost_analysis(country, total_emissions, transport, electricity, fo
             round((total_emissions - electricity * 0.6) * carbon_price),
             round((total_emissions - transport * 0.35) * carbon_price),
             round((total_emissions - electricity * 0.25) * carbon_price),
-            round((total_emissions - (electricity * 0.6 + transport * 0.35 + electricity * 0.25)) * carbon_price)
+            round((total_emissions - flights * 0.5) * carbon_price),
+            round((total_emissions - (electricity * 0.6 + transport * 0.35 + electricity * 0.25 + flights * 0.5)) * carbon_price)
         ],
-        'savings': [0, solar_savings, transport_savings, efficiency_savings, potential_savings]
+        'savings': [0, solar_savings, transport_savings, efficiency_savings, flight_reduction_savings, potential_savings],
+        'labels': ['Current', 'With Solar', 'With EV', 'Efficiency', 'Reduce Flights', 'Full Plan']
     }
     
     return {
@@ -242,120 +263,205 @@ def calculate_cost_analysis(country, total_emissions, transport, electricity, fo
         'electricity_cost': electricity_cost,
         'food_cost': food_cost,
         'waste_cost': waste_cost,
+        'flight_cost': flight_cost,
         'potential_savings': potential_savings,
         'solar_savings': solar_savings,
         'transport_savings': transport_savings,
         'efficiency_savings': efficiency_savings,
+        'flight_reduction_savings': flight_reduction_savings,
         'ten_year_savings': ten_year_savings,
         'ten_year_reduction': round(ten_year_reduction, 1),
         'roi_scenarios': scenarios,
         'carbon_price': carbon_price
     }
 
-def generate_recommendations(transport, electricity, food, waste, renewable_pct, reduction_target):
-    """Generate personalized recommendations based on emission profile"""
+def calculate_carbon_credits(flight_emissions, total_emissions, country):
+    """Calculate carbon credit requirements and costs"""
+    flight_credits_needed = round(flight_emissions, 2)
+    total_credits_needed = round(total_emissions, 2)
+    
+    credit_costs = {}
+    for credit_type, price in CARBON_CREDIT_PRICING.items():
+        credit_costs[credit_type] = {
+            'flight_only': round(flight_credits_needed * price * 85),  # Convert to INR (approx 85)
+            'total_offset': round(total_credits_needed * price * 85),
+            'price_per_tonne': price
+        }
+    
+    trees_needed = int(flight_emissions * 45)
+    renewable_kwh = int(flight_emissions * 1500)
+    
+    flight_equivalents = {
+        'trees_to_offset': trees_needed,
+        'solar_kwh_equivalent': renewable_kwh,
+        'driving_km_equivalent': int(flight_emissions * 1000 / 0.12),
+        'meals_equivalent': int(flight_emissions * 1000 / 2.5)
+    }
+    
+    return {
+        'flight_credits_needed': flight_credits_needed,
+        'total_credits_needed': total_credits_needed,
+        'credit_costs': credit_costs,
+        'flight_equivalents': flight_equivalents,
+        'recommended_project': 'forestry' if flight_emissions < 5 else 'renewable',
+        'monthly_flight_cost': round(credit_costs['premium']['flight_only'] / 12)
+    }
+
+def generate_recommendations(transport, electricity, food, waste, flights, renewable_pct, reduction_target, flight_distance, flight_class):
+    """Generate personalized recommendations including flight-specific"""
     recommendations = []
     
-    # Sort emissions by impact
     emissions = {
         'transport': transport,
         'electricity': electricity,
         'food': food,
-        'waste': waste
+        'waste': waste,
+        'flights': flights
     }
     sorted_emissions = sorted(emissions.items(), key=lambda x: x[1], reverse=True)
     
-    # Top emitter recommendation
-    top_emitter = sorted_emissions[0][0]
+    if flights > 1.0:
+        recommendations.append({
+            'icon': 'fa-plane-slash',
+            'title': 'Reduce Air Travel - Use Virtual Meetings',
+            'description': f'Your flights emit {round(flights, 1)} tonnes CO₂ annually. Replace 50% of business travel with video conferencing to significantly reduce this.',
+            'annual_savings': 800,
+            'carbon_reduction': round(flights * 0.5, 1),
+            'investment': 500,
+            'payback_period': '1 month',
+            'roi': 1600,
+            'category': 'flight'
+        })
+        
+        recommendations.append({
+            'icon': 'fa-leaf',
+            'title': 'Purchase Verified Carbon Credits for Flights',
+            'description': 'Offset unavoidable flight emissions by purchasing Gold Standard certified credits. Cost-effective way to achieve carbon neutrality for air travel.',
+            'annual_savings': 0,
+            'carbon_reduction': round(flights, 1),
+            'investment': round(flights * 50 * 85),
+            'payback_period': 'Immediate impact',
+            'roi': 0,
+            'category': 'flight'
+        })
+        
+        if flight_class in ['business', 'first']:
+            recommendations.append({
+                'icon': 'fa-chair',
+                'title': f'Fly Economy Instead of {flight_class.title()}',
+                'description': f'Switching from {flight_class} to economy reduces your flight emissions by 50-67% while saving money on ticket prices.',
+                'annual_savings': 1200,
+                'carbon_reduction': round(flights * 0.5, 1),
+                'investment': 0,
+                'payback_period': 'Immediate',
+                'roi': 0,
+                'category': 'flight'
+            })
+        
+        recommendations.append({
+            'icon': 'fa-train',
+            'title': 'Choose Rail for Short-Haul Trips (<800km)',
+            'description': 'For trips under 800km, trains emit 90% less CO₂ than flights. Consider high-speed rail for regional travel.',
+            'annual_savings': 400,
+            'carbon_reduction': round(flights * 0.3, 1),
+            'investment': 0,
+            'payback_period': 'Immediate',
+            'roi': 0,
+            'category': 'flight'
+        })
     
-    if top_emitter == 'transport' and transport > 1.0:
+    if transport > 1.0:
         recommendations.append({
             'icon': 'fa-bicycle',
             'title': 'Switch to Electric Vehicle or Public Transit',
-            'description': 'Replace your gasoline vehicle with an EV or use public transit for your daily commute. This can eliminate tailpipe emissions and reduce fuel costs significantly.',
+            'description': 'Replace your gasoline vehicle with an EV or use public transit for your daily commute.',
             'annual_savings': 420,
             'carbon_reduction': round(transport * 0.35, 1),
             'investment': 35000,
-            'payback_period': '7 years (with incentives)',
-            'roi': 14
+            'payback_period': '7 years',
+            'roi': 14,
+            'category': 'transport'
         })
     
-    if top_emitter == 'electricity' and electricity > 1.5:
+    if electricity > 1.5:
         recommendations.append({
             'icon': 'fa-solar-panel',
             'title': 'Install Rooftop Solar Panels',
-            'description': 'Generate your own clean electricity with a 5kW solar system. Excess power can be sold back to the grid in many regions.',
+            'description': 'Generate your own clean electricity with a 5kW solar system.',
             'annual_savings': 580,
             'carbon_reduction': round(electricity * 0.6, 1),
             'investment': 12000,
             'payback_period': '5-7 years',
-            'roi': 18
+            'roi': 18,
+            'category': 'energy'
         })
         
         recommendations.append({
             'icon': 'fa-home',
             'title': 'Home Energy Efficiency Upgrade',
-            'description': 'Install smart thermostats, LED lighting, and improve insulation. Low-cost changes with immediate impact.',
+            'description': 'Install smart thermostats, LED lighting, and improve insulation.',
             'annual_savings': 240,
             'carbon_reduction': round(electricity * 0.25, 1),
             'investment': 2500,
             'payback_period': '10 months',
-            'roi': 96
+            'roi': 96,
+            'category': 'energy'
         })
     
     if food > 2.0:
         recommendations.append({
             'icon': 'fa-carrot',
             'title': 'Adopt Plant-Based Diet 3 Days/Week',
-            'description': 'Reducing meat consumption, especially beef, significantly lowers your food-related carbon footprint while improving health.',
+            'description': 'Reducing meat consumption significantly lowers your food-related carbon footprint.',
             'annual_savings': 180,
             'carbon_reduction': round(food * 0.2, 1),
             'investment': 0,
             'payback_period': 'Immediate',
-            'roi': 0
+            'roi': 0,
+            'category': 'food'
         })
     
     if waste > 0.5:
         recommendations.append({
             'icon': 'fa-recycle',
             'title': 'Zero Waste Lifestyle Program',
-            'description': 'Implement composting, recycling, and buy-in-bulk strategies to minimize landfill waste and associated methane emissions.',
+            'description': 'Implement composting, recycling, and buy-in-bulk strategies.',
             'annual_savings': 120,
             'carbon_reduction': round(waste * 0.4, 1),
             'investment': 150,
             'payback_period': '15 months',
-            'roi': 80
+            'roi': 80,
+            'category': 'waste'
         })
     
     if renewable_pct < 20:
         recommendations.append({
             'icon': 'fa-wind',
             'title': 'Switch to Green Energy Provider',
-            'description': 'Choose a utility company that offers 100% renewable energy plans. Often costs the same or less than fossil fuel power.',
+            'description': 'Choose a utility company that offers 100% renewable energy plans.',
             'annual_savings': 200,
             'carbon_reduction': round(electricity * 0.5, 1),
             'investment': 0,
             'payback_period': 'Immediate',
-            'roi': 0
+            'roi': 0,
+            'category': 'energy'
         })
     
-    # Always add remote work if transport is significant
     if transport > 0.8:
         recommendations.append({
             'icon': 'fa-laptop-house',
             'title': 'Negotiate Remote Work 2 Days/Week',
-            'description': 'Working from home just 2 days per week reduces commuting emissions by 40% with no upfront investment.',
+            'description': 'Working from home 2 days per week reduces commuting emissions by 40%.',
             'annual_savings': 340,
             'carbon_reduction': round(transport * 0.4, 1),
             'investment': 200,
             'payback_period': '3 weeks',
-            'roi': 1700
+            'roi': 1700,
+            'category': 'transport'
         })
     
-    # Sort by ROI (highest first), putting 0 ROI (no investment) at end
     recommendations.sort(key=lambda x: (x['roi'] == 0, -x['roi']))
-    
-    return recommendations[:5]  # Return top 5 recommendations
+    return recommendations[:6]
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
