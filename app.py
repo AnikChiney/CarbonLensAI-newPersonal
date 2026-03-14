@@ -114,6 +114,9 @@ COUNTRY_AVERAGES = {
     'vatican city': 0.5
 }
 
+# USD to INR conversion
+USD_TO_INR = 92
+
 # Flight emission factors (kg CO2 per passenger km)
 FLIGHT_EMISSION_FACTORS = {
     'economy': 0.255,
@@ -216,7 +219,8 @@ def calculate_emissions(data):
 
 def calculate_cost_analysis(country, total_emissions, transport, electricity, food, waste, flights, reduction_target, renewable_pct):
     """Calculate cost implications including flight carbon costs"""
-    carbon_price = CARBON_PRICING.get(country, CARBON_PRICING['default'])
+    carbon_price_usd = CARBON_PRICING.get(country, CARBON_PRICING['default'])
+    carbon_price = carbon_price_usd * USD_TO_INR
     
     transport_cost = round(transport * carbon_price)
     electricity_cost = round(electricity * carbon_price)
@@ -282,10 +286,12 @@ def calculate_carbon_credits(flight_emissions, total_emissions, country):
     
     credit_costs = {}
     for credit_type, price in CARBON_CREDIT_PRICING.items():
+        price_inr = price * USD_TO_INR
+
         credit_costs[credit_type] = {
-            'flight_only': round(flight_credits_needed * price * 85),  # Convert to INR (approx 85)
-            'total_offset': round(total_credits_needed * price * 85),
-            'price_per_tonne': price
+        'flight_only': round(flight_credits_needed * price_inr),
+        'total_offset': round(total_credits_needed * price_inr),
+        'price_per_tonne': round(price_inr)
         }
     
     trees_needed = int(flight_emissions * 45)
@@ -339,7 +345,7 @@ def generate_recommendations(transport, electricity, food, waste, flights, renew
             'description': 'Offset unavoidable flight emissions by purchasing Gold Standard certified credits. Cost-effective way to achieve carbon neutrality for air travel.',
             'annual_savings': 0,
             'carbon_reduction': round(flights, 1),
-            'investment': round(flights * 50 * 85),
+            'investment': round(flights * 50 * USD_TO_INR),,
             'payback_period': 'Immediate impact',
             'roi': 0,
             'category': 'flight'
