@@ -345,7 +345,7 @@ def generate_recommendations(transport, electricity, food, waste, flights, renew
             'description': 'Offset unavoidable flight emissions by purchasing Gold Standard certified credits. Cost-effective way to achieve carbon neutrality for air travel.',
             'annual_savings': 0,
             'carbon_reduction': round(flights, 1),
-            'investment': round(flights * 50 * USD_TO_INR),,
+            'investment': round(flights * 50 * USD_TO_INR),
             'payback_period': 'Immediate impact',
             'roi': 0,
             'category': 'flight'
